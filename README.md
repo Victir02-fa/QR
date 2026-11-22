@@ -1,59 +1,71 @@
 # Constancia
 
-Tu pizarra de hábitos diarios para iPhone. Marcas cada día lo que cumpliste (ejercicio, comer saludable, leer, no azúcar…), lo ves en **anillos de progreso** y la app te dice **en qué fallas** para que mejores cada día.
+Tu pizarra de hábitos diarios para iPhone. Marcas lo que cumpliste cada día (ejercicio, comer saludable, leer, no azúcar…). Lo ves en **anillos de progreso** y la app te dice **en qué fallas** para que mejores cada día.
+
+Versión 2.0.0 · diseño Liquid Glass (iOS 26/27) · [Informe de auditoría](docs/auditoria.md)
 
 ## Qué hace
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Hoy** | Anillos concéntricos del día, tira de la semana y lista de hábitos. Los hábitos de sí/no se marcan con un toque; los de meta numérica suman con `+10 min`, `+5 págs`, etc. |
-| **Historial** | Calendario del mes con mini‑anillos por día (los días perfectos se marcan en dorado) y mapa de calor de los últimos 12 meses, en general o por hábito. |
-| **Análisis** | Cumplimiento de la semana y del mes, rachas actuales y récords, tu día de la semana más difícil, tu hábito más débil, hábitos que fallan juntos, metas en las que “te quedas cerca” y tus motivos de falla más comunes. |
-| **Ajustes** | Agregar, editar, ordenar o archivar hábitos; horarios de la mañana y la noche; respaldo (exportar e importar). |
+| **Hoy** | Resumen del día al estilo de la app Actividad (anillos y valores por hábito), tira de la semana y lista de hábitos. Los de sí o no se marcan con un toque; los de meta numérica tienen un control con − y +. |
+| **Historial** | Calendario del mes con mini‑anillos por día (los días perfectos aparecen en amarillo) y mapa de calor de 12 meses, en general o por hábito. |
+| **Análisis** | Cumplimiento de la semana y del mes, rachas y récords, tu día más difícil, tu hábito más débil, hábitos que fallan juntos, metas en las que te quedas cerca y motivos de falla con consejos. |
+| **Ajustes** | Hábitos (agregar, editar, ordenar, archivar), horarios de mañana y noche, respaldo, modo ejemplo y diagnóstico. |
 
-**Mañana y noche.** Antes de mediodía la app te muestra el *plan de hoy* y lo que te faltó ayer. Después de la hora de la noche te muestra *cierra tu día* con lo que te falta. Para recibir notificaciones del iPhone, sigue los pasos de **Ajustes → Recordatorios** (dos automatizaciones en la app Atajos).
+**Reglas.**
+- Todos los hábitos son diarios.
+- Un día pasado sin marcar cuenta como falla.
+- Hoy no cuenta como falla hasta que termina el día.
+- Si cambias una meta, los días anteriores conservan la meta que tenían.
 
-**Motivos de falla.** Cuando un día pasado queda incompleto, la app te pregunta por qué falló cada hábito: falta de tiempo, cansancio, se me olvidó, sin ganas, antojo, evento o salida, enfermedad u otro. Así el Análisis te muestra qué motivo se repite y te da un consejo para ese motivo.
+## Instalar en el iPhone
 
-**Reglas.** Todos los hábitos son diarios. Un día pasado sin marcar cuenta como falla. El día de hoy no cuenta como falla hasta que termina. Si cambias la meta de un hábito, los días anteriores conservan la meta que tenían.
+1. En GitHub, ve a **Settings → Pages**. Elige **Deploy from a branch**, la rama con la app y la carpeta **/ (root)**.
+2. Abre `https://victir02-fa.github.io/QR/` en **Safari** → **Compartir** → **Agregar a inicio**.
 
-## Instalarla en tu iPhone (etapa 1: web app)
+La app funciona sin conexión y guarda los datos en el iPhone. Cuando hay una versión nueva, aparece el aviso **Actualizar**.
 
-1. En GitHub, entra a **Settings → Pages** de este repositorio.
-2. En *Build and deployment* elige **Deploy from a branch**. Selecciona la rama donde está la app (por ejemplo `main`) y la carpeta **/ (root)**. Guarda.
-3. En un par de minutos la app queda en `https://victir02-fa.github.io/QR/`.
-4. Abre ese link en **Safari** desde tu iPhone → botón **Compartir** → **Agregar a inicio**.
+## Desarrollo
 
-Se abre a pantalla completa como cualquier app y funciona sin internet. Los datos se guardan **en ese iPhone**, así que usa *Ajustes → Copiar respaldo* de vez en cuando.
-
-## Estructura
-
-```
-src/app.html          Fuente única de la app (HTML + CSS + JS, sin dependencias)
-index.html            Web app generada a partir de src/app.html (no editar a mano)
-manifest.webmanifest  Nombre, colores e íconos para "Agregar a inicio"
-sw.js                 Service worker: funciona sin conexión
-icons/                Ícono en SVG y PNG (180, 192, 512 y maskable)
-scripts/build.mjs     Genera index.html: node scripts/build.mjs
-docs/etapa-2-ios-nativa.md  Diseño de la app nativa con widgets
+```bash
+npm install            # íconos (lucide-static) y axe-core, solo para desarrollo
+npm run build          # src/ → index.html, dist/constancia.html, sw.js
+npm test               # pruebas unitarias (node:test)
+npm run test:e2e       # pruebas de punta a punta, robustez y accesibilidad (Playwright + axe-core)
+npm run icons          # regenera src/icons.js si cambias la lista de íconos
 ```
 
-`src/app.html` también se publica tal cual como artifact de Claude. Ahí guarda los datos en la base de datos privada del artifact, que se sincroniza entre tus dispositivos. Como web app instalada usa `localStorage`. El formato de los datos es el mismo en las dos versiones, así que un respaldo sirve en cualquiera de ellas y también en la etapa 2.
+```
+src/core.js         Lógica pura: fechas, validación, métricas, hallazgos, respaldo, datos de ejemplo
+src/app.js          Interfaz, almacenamiento con reintentos, gestión de errores y diagnóstico
+src/styles.css      Diseño (tokens, Liquid Glass, accesibilidad)
+src/shell.html      Estructura de la página
+src/icons.js        Subconjunto de íconos Lucide (generado)
+scripts/build.mjs   Construye la web app con CSP por hash y el service worker versionado
+tests/              Pruebas unitarias (core.test.mjs) y de punta a punta (e2e/run.cjs)
+dist/constancia.html  Página que se publica como artifact de Claude
+index.html, sw.js   Web app instalable (generados; no editar a mano)
+docs/               Auditoría y diseño de la etapa 2
+```
 
-## Formato de datos
+**Almacenamiento.**
+- **Artifact de Claude:** los datos van a la base de datos privada del artifact. Solo el dueño la lee y la escribe, y se sincroniza entre dispositivos.
+- **Web app instalada:** los datos van a `localStorage`.
+
+El formato es el mismo en los dos casos:
 
 ```jsonc
-// documento "config"
-{ "habits": [ { "id": "leer", "name": "Leer", "icon": "📖", "color": "#00D8FF",
-                "type": "count", "unit": "págs", "step": 5,
-                "goals": [ { "from": "2026-11-22", "goal": 20 } ], "start": "2026-11-22" } ],
+// "config"
+{ "version": 2, "habits": [ { "id": "leer", "name": "Leer", "icon": "book-open", "color": "#00D8FF",
+  "type": "count", "unit": "págs", "step": 5, "goals": [ { "from": "2026-11-22", "goal": 20 } ], "start": "2026-11-22" } ],
   "settings": { "morning": "08:00", "night": "21:00" } }
-
-// un documento por mes: "m-2026-11"
-{ "days":    { "22": { "leer": 15, "saludable": 1 } },
-  "reasons": { "21": { "leer": "cansancio" } } }
+// "m-2026-11"
+{ "days": { "22": { "leer": 15, "saludable": 1 } }, "reasons": { "21": { "leer": "cansancio" } } }
 ```
 
 ## Etapa 2
 
-La app nativa en SwiftUI agrega widgets reales en la pantalla de inicio y de bloqueo, marcar hábitos desde el widget, notificaciones integradas y respaldo en iCloud. El diseño completo está en [`docs/etapa-2-ios-nativa.md`](docs/etapa-2-ios-nativa.md).
+App nativa en SwiftUI con widgets en inicio y bloqueo, marcar desde el widget, notificaciones integradas e iCloud. El diseño está en [`docs/etapa-2-ios-nativa.md`](docs/etapa-2-ios-nativa.md).
+
+Íconos: [Lucide](https://lucide.dev), licencia ISC.

@@ -1,0 +1,25 @@
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Archivos generados al día
+        run: node scripts/build.mjs --check
+      - name: Pruebas unitarias
+        run: npm test
+      - name: Pruebas de punta a punta y accesibilidad
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+          npm run test:e2e

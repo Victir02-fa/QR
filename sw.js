@@ -1,6 +1,7 @@
-// Service worker: permite abrir Constancia sin internet.
-// La página se pide primero a la red (para recibir actualizaciones) y, si no hay conexión, sale del caché.
-const CACHE = 'constancia-v1.0.0';
+// Service worker de Constancia (generado por scripts/build.mjs; no editar sw.js a mano).
+// · Funciona sin conexión: la app y sus íconos quedan en caché.
+// · Las actualizaciones esperan a que el usuario toque "Actualizar" en la app.
+const CACHE = 'constancia-0ca8fabf14';
 const ASSETS = [
   './',
   './index.html',
@@ -8,48 +9,36 @@ const ASSETS = [
   './icons/icon.svg',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('constancia-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
-const putInCache = (req, res) => {
-  if (res && (res.ok || res.type === 'opaque')) {
-    const copy = res.clone();
-    caches.open(CACHE).then((c) => c.put(req, copy));
-  }
-  return res;
-};
+self.addEventListener('message', (event) => {
+  if (event.data === 'skipWaiting') self.skipWaiting();
+});
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
 
+  // Navegación: la versión en caché responde al instante y sin conexión.
   if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req)
-        .then((res) => putInCache('./index.html', res))
-        .catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(caches.match('./index.html').then((hit) => hit || fetch(req)));
     return;
   }
-
-  const sameOrigin = url.origin === self.location.origin;
-  const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if (!sameOrigin && !isFont) return;
-
-  event.respondWith(
-    caches.match(req).then((hit) => hit || fetch(req).then((res) => putInCache(req, res)).catch(() => hit))
-  );
+  event.respondWith(caches.match(req).then((hit) => hit || fetch(req)));
 });
